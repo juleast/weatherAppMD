@@ -14,6 +14,7 @@
         rows: 2
         MDTopAppBar:
             id: city_name
+            md_bg_color: app.theme_cls.accent_color
             title: "Simple Weather"
             left_action_items: [["menu"]]
             right_action_items: [["reload", lambda x: root.update()]]
@@ -25,9 +26,10 @@
                 # basic weather info
                 MDGridLayout:
                     rows: 2
-                    padding: 10
+                    padding: 20
                     # temperature and condition
                     MDGridLayout:
+
                         canvas.before:
                             Line:
                                 width: 1
@@ -40,55 +42,78 @@
                                     width: 1
                                     rectangle: self.x, self.y, self.width, self.height
                             rows: 2
-                            MDLabel:
-                                id: temp_text
-                                text: "Temp"
-                                halign: 'center'
-                                font_size: "46sp"
+                            MDGridLayout:
+                                cols: 2
+                                size_hint_y: .2
+                                MDLabel:
+                                    id: temp_low
+                                    text: "Low"
+                                    font_size: "10sp"
+                                    halign: 'center'
+                                MDLabel:
+                                    id: temp_high
+                                    text: "High"
+                                    font_size: "10sp"
+                                    halign: 'center'
                             MDGridLayout:
                                 canvas.before:
                                     Line:
                                         width: 1
                                         rectangle: self.x, self.y, self.width, self.height
-                                size_hint_y: .4
+
                                 rows: 2
-                                MDGridLayout:
-                                    cols: 2
-                                    MDLabel:
-                                        id: temp_low
-                                        text: "low"
-                                        halign: 'center'
-                                    MDLabel:
-                                        id: temp_high
-                                        text: "high"
-                                        halign: 'center'
+                                MDLabel:
+                                    canvas.before:
+                                        Line:
+                                            width: 1
+                                            rectangle: self.x, self.y, self.width, self.height
+                                    id: temp_text
+                                    text: "Temp"
+                                    halign: 'center'
+                                    font_size: "46sp"
                                 MDLabel:
                                     id: temp_feels
                                     text: "Feels Like"
+                                    font_size: "15sp"
+                                    size_hint_y: .3
                                     halign: 'center'
                         MDGridLayout:
                             canvas.before:
                                 Line:
                                     width: 1
                                     rectangle: self.x, self.y, self.width, self.height
-                            size_hint_y: 1
-                            rows: 2
-                            Image:
-                                id: weather_icon
-                                valign: 'center'
-                                source: "./assets/icons/weather_sunny.png"
+                            rows: 3
                             MDLabel:
-                                id: weather_condition
-                                size_hint_y: .4
-                                text: "Clear"
-                                halign: 'center'
+                                canvas.before:
+                                    Line:
+                                        width: 1
+                                        rectangle: self.x, self.y, self.width, self.height
+                                size_hint_y: .2
+                            MDGridLayout:
+                                rows: 2
+                                Image:
+                                    id: weather_icon
+                                    valign: 'center'
+                                    source: "./assets/icons/weather_sunny.png"
+                                MDLabel:
+                                    canvas.before:
+                                        Line:
+                                            width: 1
+                                            rectangle: self.x, self.y, self.width, self.height
+                                    id: weather_condition
+                                    text: "Clear"
+                                    font_size: "15sp"
+                                    size_hint_y: .3
+                                    halign: 'center'
+                    # misc weather data
                     MDGridLayout:
                         canvas.before:
                             Line:
                                 width: 1
                                 rectangle: self.x, self.y, self.width, self.height
-                        size_hint_y: 1
+
                         rows: 3
+                        size_hint_y: 1
                         MDGridLayout:
                             size_hint_y: 1
                             cols: 2

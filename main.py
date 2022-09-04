@@ -2,14 +2,14 @@
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 # kivy imports
+import kivy
+kivy.require('2.1.0')
 from kivy.lang import Builder
 from kivy.config import Config
+# local imports
 from apicall import weatherData, getLoc
 
-# configure kivy graphics to a custom dimensions
-Config.set('graphics', 'width', '400')
-Config.set('graphics', 'height', '600')
-Config.set('kivy', 'window_icon', './assets/icons/app_icon.png')
+
 # load the main kvlang file
 Builder.load_file('weather.kv')
 
