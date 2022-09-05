@@ -2,9 +2,6 @@
 import requests as req
 from datetime import datetime
 from math import trunc
-# get the current date and time
-today = datetime.now()
-now = today.strftime("%Y-%m-%dT%H:%M:%S")
 # api key from openweathermap
 api_keys = ["6Q4JUN7Y8TYWPAE9SDJ59V6V6", ""]
 # the base url for the weather service
@@ -26,6 +23,9 @@ class weatherData:
 
     # function that will fetch the weather data from the api call
     def fetch(self):
+        # get current time
+        today = datetime.now()
+        now = today.strftime("%Y-%m-%dT%H:%M:%S")
         # the final url is built into the url variable
         url = f"{base_urls[0]}{self.city}/{now}?unitGroup={temp_units[self.offset_type]}&key={api_keys[0]}&include=current"
         # this sends a get request with our url as the parameter

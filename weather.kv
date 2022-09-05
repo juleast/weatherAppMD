@@ -18,11 +18,16 @@
             title: "Simple Weather"
             left_action_items: [["menu"]]
             right_action_items: [["reload", lambda x: root.update()]]
+            MDProgressBar:
+                id: progress
+                type: "indeterminate"
         MDBottomNavigation:
             MDBottomNavigationItem:
-                md_bg_color: app.theme_cls.primary_color
                 name: "screen 1"
                 text: "Today"
+                transition:
+                FitImage:
+                    source: './assets/images/gorgeous-clouds-background-with-blue-sky-design/25501.jpg'
                 # basic weather info
                 MDGridLayout:
                     rows: 2
