@@ -19,10 +19,14 @@ degree = "°"
 unit_change = [False]
 
 # get an initial detected location
-default = "Newmarket,Ontario"
+default = getLoc().fetch()
 
 
 class mainScreen(MDBoxLayout):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.update()
+
     # function that updates what is displayed on the screen
     def show(self, unit, city, data):
         self.city_name.title = city
@@ -32,11 +36,11 @@ class mainScreen(MDBoxLayout):
         self.temp_low.text = f"Low {data['main'][2]}{degree}"
         self.temp_high.text = f"High {data['main'][3]}{degree}"
         self.weather_condition.text = data['main'][4]
+        self.weather_icon.source = f"./assets/icons/{data['main'][5]}.png"
         # misc weather data values are updated here
         self.weather_precip.text = f"{data['misc'][0]}%"
         self.weather_wind.text = f"{data['misc'][1]} {units[unit][1]}"
         self.weather_humid.text = f"{data['misc'][2]}%"
-        self.weather_icon.source = "./assets/icons/weather_night.png"
 
     def update(self):
         weather = weatherData(default, "c").fetch()
@@ -47,6 +51,7 @@ class mainScreen(MDBoxLayout):
 class MainApp(MDApp):
     def build(self):
         self.theme_cls.primary_palette = "LightBlue"
+        self.theme_cls.material_style = "M3"
         return mainScreen()
 
 
