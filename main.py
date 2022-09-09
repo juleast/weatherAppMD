@@ -3,12 +3,11 @@ from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 # kivy imports
 import kivy
+
 kivy.require('2.1.0')
 from kivy.lang import Builder
-from kivy.config import Config
 # local imports
 from apicall import weatherData, getLoc
-
 
 # load the main kvlang file
 Builder.load_file('weather.kv')
@@ -25,7 +24,7 @@ default = getLoc().fetch()
 class mainScreen(MDBoxLayout):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.update()
+        # self.update()
 
     # function that updates what is displayed on the screen
     def show(self, unit, city, data):
@@ -43,7 +42,8 @@ class mainScreen(MDBoxLayout):
         self.weather_humid.text = f"{data['misc'][2]}%"
 
     def update(self):
-        weather = weatherData(default, "c").fetch()
+        weather = weatherData(default, "c").now_fetch()
+        weatherData(default, "c").tmr_fetch()
         if weather != -1:
             self.show("metric", default, weather)
 

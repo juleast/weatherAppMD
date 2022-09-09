@@ -1,6 +1,7 @@
 # importing libraries required to request API call from weather service
 import requests as req
 from datetime import datetime
+from datetime import timedelta
 from math import trunc
 # api key from openweathermap
 api_keys = ["6Q4JUN7Y8TYWPAE9SDJ59V6V6", "LQFCHSKEJDLP43RMKJW4G53XJ"]
@@ -27,10 +28,11 @@ class weatherData:
         self.offset = offset
 
     # function that will fetch the weather data from the api call
-    def fetch(self):
+    def now_fetch(self):
         # get current time
         today = datetime.now()
         now = today.strftime("%Y-%m-%dT%H:%M:%S")
+        print(now)
         # the final url is built into the url variable
         base = f"{base_urls[0]}/{self.city}/{now}?"
         url_options = f"unitGroup={temp_units[self.offset]}&key={api_keys[1]}&iconSet=icons2&include=current"
@@ -67,6 +69,12 @@ class weatherData:
             print("An error has occurred in weather fetching")
             return -1
 
+    # function that will fetch weather data 1 day from current day
+    def tmr_fetch(self):
+        tmr_date = datetime.today() + timedelta(days=1)
+        tmr = tmr_date.strftime("%Y-%m-%d")
+        print(tmr)
+
 
 # class that gets the current location of the device based on the IP address
 class getLoc:
@@ -77,7 +85,6 @@ class getLoc:
         url = f"{base_urls[1]}"
         r = req.get(url)
         data = r.json()
-        print(data)
         if data['metro_code'] == 0:
             city = data['city']
             region = data['region_name']
