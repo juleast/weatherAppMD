@@ -1,6 +1,8 @@
 # kivymd imports
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.button import MDFlatButton, MDRaisedButton
 # kivy imports
 import kivy
 
@@ -21,7 +23,7 @@ unit_change = [False]
 default = getLoc().fetch()
 
 
-class mainScreen(MDBoxLayout):
+class MainScreen(MDBoxLayout):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # self.update()
@@ -32,8 +34,8 @@ class mainScreen(MDBoxLayout):
         # main weather data values are updated here
         self.temp.text = f"{data['main'][0]}{units[unit][0]}"
         self.temp_feels.text = f"Feels like {data['main'][1]}{degree}"
-        self.temp_low.text = f"Low {data['main'][2]}{degree}"
-        self.temp_high.text = f"High {data['main'][3]}{degree}"
+        self.temp_low.text = f"{data['main'][2]}{degree}"
+        self.temp_high.text = f"{data['main'][3]}{degree}"
         self.weather_condition.text = data['main'][4]
         self.weather_icon.source = f"./assets/icons/{data['main'][5]}.png"
         # misc weather data values are updated here
@@ -48,11 +50,32 @@ class mainScreen(MDBoxLayout):
             self.show("metric", default, weather)
 
 
+class Content(MDBoxLayout):
+    pass
+
+
 class MainApp(MDApp):
+    def __init__(self, *args, **kwargs):
+        super().__init__(**kwargs)
+        self.picker = None
+        self.picker = MDDialog(
+            title="Change location",
+            content_clse=Content(),
+            buttons=[
+                MDFlatButton(
+                    text="CANCEL",
+                    on_release=lambda x: self.picker.dismiss()
+                ),
+                MDRaisedButton(
+                    text="SAVE"
+                )
+            ]
+        )
+
     def build(self):
         self.theme_cls.primary_palette = "LightBlue"
         self.theme_cls.material_style = "M3"
-        return mainScreen()
+        return MainScreen()
 
 
 if __name__ == "__main__":

@@ -1,4 +1,10 @@
-<mainScreen>:
+#:import Factory kivy.factory.Factory
+<DrawerItem@MDNavigationDrawerItem>:
+    padding: 0, 0, "10dp", 0
+    focus_color: app.theme_cls.primary_light
+<Content>:
+    orientation: 'vertical'
+<MainScreen>:
     # access variables relating to main weather data
     temp: temp_text
     temp_low: temp_low
@@ -63,17 +69,30 @@
                                         # labels that show low and high temperatures
                                         MDGridLayout:
                                             cols: 2
+                                            padding: "5dp", 0, "5dp", 0
                                             size_hint_y: .2
-                                            MDLabel:
-                                                id: temp_low
-                                                text: "Low"
-                                                font_size: "10sp"
-                                                halign: 'center'
-                                            MDLabel:
-                                                id: temp_high
-                                                text: "High"
-                                                font_size: "10sp"
-                                                halign: 'center'
+                                            MDGridLayout:
+                                                cols: 2
+                                                MDIcon:
+                                                    icon: "arrow-down-thin"
+                                                    size_hint: (1, .5)
+                                                    halign: 'right'
+                                                MDLabel:
+                                                    id: temp_low
+                                                    text: "Low"
+                                                    font_size: "10sp"
+                                                    halign: 'left'
+                                            MDGridLayout:
+                                                cols: 2
+                                                MDIcon:
+                                                    icon: "arrow-up-thin"
+                                                    size_hint: (1, .5)
+                                                    halign: 'right'
+                                                MDLabel:
+                                                    id: temp_high
+                                                    text: "High"
+                                                    font_size: "10sp"
+                                                    halign: 'left'
                                         # layout that has labels for main temperature and feels like temperature
                                         MDGridLayout:
                                             canvas.before:
@@ -90,7 +109,7 @@
                                                 id: temp_text
                                                 text: "Temp"
                                                 halign: 'center'
-                                                font_size: "46sp"
+                                                font_size: "56sp"
                                             MDLabel:
                                                 id: temp_feels
                                                 text: "Feels Like"
@@ -295,7 +314,7 @@
 
         MDNavigationDrawer:
             id: nav_drawer
-            radius: (0, 16, 16, 0)
+            radius: (0, "16dp", "16dp", 0)
             md_bg_color: "lightgrey"
             size_hint_x: .7
             MDNavigationDrawerMenu:
@@ -303,6 +322,12 @@
                     title: "Simple Weather"
                     title_font_size: "20sp"
                     title_halign: 'center'
+                    padding: 0, 0, "26dp", 0
                 MDNavigationDrawerDivider:
                     size_hint_x: 1
-                    padding: ['10dp', '10dp', '10dp', '12dp']
+                    padding: 0, "10dp", 0, "10dp"
+                DrawerItem:
+                    icon: "map-marker-multiple"
+                    text: "Locations"
+                    on_press: app.picker.open()
+
