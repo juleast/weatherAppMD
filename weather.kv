@@ -1,4 +1,3 @@
-#:import Factory kivy.factory.Factory
 <DrawerItem@MDNavigationDrawerItem>:
     padding: 0, 0, "10dp", 0
     focus_color: app.theme_cls.primary_light
@@ -16,11 +15,15 @@
     weather_precip: weather_precip
     weather_wind: weather_wind
     weather_humid: weather_humid
+    # other widget variables
+    nav_drawer: nav_drawer
     # the main navigation layout
     MDNavigationLayout:
-        MDScreenManager:
+        ScreenManager:
+            id: screenmanager
             # the main screen that contains stuff related to weather
-            MDScreen:
+            Screen:
+                name: "main"
                 MDGridLayout:
                     rows: 2
                     # the top app bar for title, updates and etc.
@@ -311,6 +314,13 @@
                                 text: "Yeet3"
                                 halign: 'center'
 
+            Screen:
+                name: "settings"
+                MDGridLayout:
+                    rows: 2
+                    MDTopAppBar:
+                        left_action_items: [["arrow-left", lambda x: root.open_main()]]
+
 
         MDNavigationDrawer:
             id: nav_drawer
@@ -329,5 +339,8 @@
                 DrawerItem:
                     icon: "map-marker-multiple"
                     text: "Locations"
-                    on_press: app.picker.open()
-
+                    on_release: root.picker.open()
+                DrawerItem:
+                    icon: "cog"
+                    text: "Settings"
+                    on_release: root.open_settings()

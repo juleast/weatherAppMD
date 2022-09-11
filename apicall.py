@@ -32,19 +32,21 @@ class weatherData:
         # get current time
         today = datetime.now()
         now = today.strftime("%Y-%m-%dT%H:%M:%S")
-        print(now)
-        # the final url is built into the url variable
+        # the URL to be fetched is divided into sections then built into the url variable
         base = f"{base_urls[0]}/{self.city}/{now}?"
-        url_options = f"unitGroup={temp_units[self.offset]}&key={api_keys[1]}&iconSet=icons2&include=current"
+        url_options = f"unitGroup={temp_units[self.offset]}&key={api_keys[0]}&iconSet=icons2&include=current"
         url = f"{base}{url_options}"
         # this sends a get request with our url as the parameter
         r = req.get(url)
-        # store the fetched json data
-        data = r.json()
-
-        # the cod key contains a status code, this conditional will check for a valid one in case of errors
-        if data['queryCost'] == 1:
+        print(r.status_code)
+        # check what status code the requested URL returns to determine if a valid data has been returned
+        if r.status_code == 200:
+            # store the fetched json data
+            data = r.json()
             print(data)
+            # get resolved address
+            get_city = data['resolvedAddress'].split(",")
+            city = f"{get_city[0]},{get_city[1]}"
             # variable to store current weather data
             data_now = data['currentConditions']
             # variable to store daily weather data
@@ -64,7 +66,7 @@ class weatherData:
             main = [temp, feels_like, min_temp, max_temp, descr, icon]
             misc = [precip, windspeed, humidity]
             # return all acquired data as a dictionary
-            return {'main': main, 'misc': misc}
+            return {'main': main, 'misc': misc, 'location': city}
         else:
             print("An error has occurred in weather fetching")
             return -1
@@ -73,7 +75,7 @@ class weatherData:
     def tmr_fetch(self):
         tmr_date = datetime.today() + timedelta(days=1)
         tmr = tmr_date.strftime("%Y-%m-%d")
-        print(tmr)
+        #print(tmr)
 
 
 # class that gets the current location of the device based on the IP address
