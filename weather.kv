@@ -4,7 +4,7 @@
 <Content>:
     orientation: 'vertical'
 <MainScreen>:
-    # access variables relating to main weather data
+    # access variables relating to today weather data
     temp: temp_text
     temp_low: temp_low
     temp_high: temp_high
@@ -15,6 +15,14 @@
     weather_precip: weather_precip
     weather_wind: weather_wind
     weather_humid: weather_humid
+    # access variables related to tmr weather data
+    temp_low_tm: temp_low_tm
+    temp_high_tm: temp_high_tm
+    weather_icon_tm: weather_icon_tm
+    weather_condition_tm: weather_condition_tm
+    weather_precip_tm: weather_precip_tm
+    weather_wind_tm: weather_wind_tm
+    weather_humid_tm: weather_humid_tm
     # other widget variables
     nav_drawer: nav_drawer
     # the main navigation layout
@@ -40,12 +48,11 @@
                     # the bottom navigation widget and a few screens for today, tomorrow and 10 days weather
                     MDBottomNavigation:
                         panel_color: app.theme_cls.primary_light
-                        #selected_color_background: "blue"
                         # today weather page
                         MDBottomNavigationItem:
                             name: "screen 1"
                             text: "Today"
-                            transition:
+                            icon: "sun-thermometer"
                             # background image
                             FitImage:
                                 source: './assets/images/gorgeous-clouds-background-with-blue-sky-design/25501.jpg'
@@ -83,7 +90,7 @@
                                                 MDLabel:
                                                     id: temp_low
                                                     text: "Low"
-                                                    font_size: "10sp"
+                                                    font_size: "15sp"
                                                     halign: 'left'
                                             MDGridLayout:
                                                 cols: 2
@@ -94,7 +101,7 @@
                                                 MDLabel:
                                                     id: temp_high
                                                     text: "High"
-                                                    font_size: "10sp"
+                                                    font_size: "15sp"
                                                     halign: 'left'
                                         # layout that has labels for main temperature and feels like temperature
                                         MDGridLayout:
@@ -186,6 +193,10 @@
                         MDBottomNavigationItem:
                             name: "screen 2"
                             text: "Tomorrow"
+                            icon: "sun-clock"
+                            # background image
+                            FitImage:
+                                source: './assets/images/gorgeous-clouds-background-with-blue-sky-design/25501.jpg'
                             # basic weather info
                             MDGridLayout:
                                 rows: 2
@@ -209,17 +220,30 @@
                                         # labels that show low and high temperatures
                                         MDGridLayout:
                                             cols: 2
+                                            padding: "5dp", 0, "5dp", 0
                                             size_hint_y: .2
-                                            MDLabel:
-                                                id: temp_low_tm
-                                                text: "Low"
-                                                font_size: "10sp"
-                                                halign: 'center'
-                                            MDLabel:
-                                                id: temp_high_tm
-                                                text: "High"
-                                                font_size: "10sp"
-                                                halign: 'center'
+                                            MDGridLayout:
+                                                cols: 2
+                                                MDIcon:
+                                                    icon: "arrow-down-thin"
+                                                    size_hint: (1, .5)
+                                                    halign: 'right'
+                                                MDLabel:
+                                                    id: temp_low_tm
+                                                    text: "Low"
+                                                    font_size: "10sp"
+                                                    halign: 'left'
+                                            MDGridLayout:
+                                                cols: 2
+                                                MDIcon:
+                                                    icon: "arrow-up-thin"
+                                                    size_hint: (1, .5)
+                                                    halign: 'right'
+                                                MDLabel:
+                                                    id: temp_high_tm
+                                                    text: "High"
+                                                    font_size: "10sp"
+                                                    halign: 'left'
                                         # layout that has labels for main temperature and feels like temperature
                                         MDGridLayout:
                                             canvas.before:
@@ -310,6 +334,7 @@
                         MDBottomNavigationItem:
                             name: "screen 3"
                             text: "10 days"
+                            icon: "clock-fast"
                             MDLabel:
                                 text: "Yeet3"
                                 halign: 'center'
