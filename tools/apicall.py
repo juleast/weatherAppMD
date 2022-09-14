@@ -1,10 +1,11 @@
 # importing libraries required to request API call from weather service
 import requests as req
+from requests.exceptions import ConnectionError
 from datetime import datetime
 from datetime import timedelta
 from math import trunc
 
-# api key from openweathermap
+# api key for weather service. modify these to use your own
 api_keys = ["6Q4JUN7Y8TYWPAE9SDJ59V6V6", "LQFCHSKEJDLP43RMKJW4G53XJ"]
 # the base url for the weather service
 base_urls = ["https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline",
@@ -39,9 +40,11 @@ class weatherData:
         base = f"{self.base}/{now}?"
         url_options = f"unitGroup={temp_units[self.offset]}&key={api_keys[0]}&iconSet=icons2&include=current"
         url = f"{base}{url_options}"
-        # sends a get request to given url
-        r = req.get(url)
-        print(r.status_code)
+        try:
+            # sends a get request to given url
+            r = req.get(url)
+        except ConnectionError:
+            return -1
         # check what status code the requested URL returns to determine if a valid data has been returned
         if r.status_code == 200:
             # store the fetched json data
@@ -83,7 +86,7 @@ class weatherData:
         tmr = tmr_date.strftime("%Y-%m-%d")
         # the URL to be fetched is divided into sections then built into the url variable
         base = f"{self.base}/{tmr}?"
-        url_options = f"unitGroup={temp_units[self.offset]}&key={api_keys[0]}&iconSet=icons2"
+        url_options = f"unitGroup={temp_units[self.offset]}&key={api_keys[1]}&iconSet=icons2"
         url = f"{base}{url_options}"
         # sends a get request to given url
         r = req.get(url)
@@ -96,8 +99,17 @@ class weatherData:
             min_temp = str_r(data_d['tempmin'])
             max_temp = str_r(data_d['tempmax'])
             descr = data_d['conditions'].title()
+            # misc weather data
+            precip = str_r(data_d['precipprob'])
+            windspeed = str_r(data_d['windspeed'])
+            humidity = str_r(data_d['humidity'])
             icon = data_d['icon']
-            print(min_temp, max_temp, descr, icon)
+            # store collected data
+            main = [min_temp, max_temp, descr, icon]
+            misc = [precip, windspeed, humidity]
+            # return all acquired data as a dictionary
+            return {'main': main, 'misc': misc}
+
         else:
             print("An error has occurred in fetching weather data for tmr")
 

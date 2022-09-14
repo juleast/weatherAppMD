@@ -4,33 +4,35 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton, MDRaisedButton
 # kivy imports
-import kivy
+from kivy import require
 from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.properties import OptionProperty
 from kivy.uix.screenmanager import FallOutTransition, RiseInTransition
+from kivy.loader import Loader
 
 # local imports
 from tools.apicall import weatherData
 from tools.check import internet
+from threading import Thread
 
-kivy.require('2.1.0')
-# white background color
-Window.clearcolor = (1, 1, 1, 1)
+# some misc options
+Loader.loading_image = "./assets/images/bg/25501.jpg"
+require('2.1.0')
 
 # load the kv files
 Builder.load_file('weather.kv')
 Builder.load_file('dialogcontents.kv')
 
 # variables for special characters and units
-units = {'metric': ["°C", "km/h"], 'us': ["°F", "mph"]}
+units = {'metric': ["°C", "km/h", "c"], 'us': ["°F", "mph", "f"]}
 degree = "°"
 unit_change = [False]
 
 
 # dialog class to add an option to change button direction
-class Dialog(MDDialog):
+class MDDialog(MDDialog):
 
     button_direction = OptionProperty(
         "right", options=["left", "right", "center"]
@@ -47,16 +49,25 @@ class PickerContent(MDBoxLayout):
     pass
 
 
-# widget for error message popup
+# widget for fetch error message popup
 class ErrorContent(MDBoxLayout):
     pass
 
 
+# widget for internet error popup
+class ConErrorContent(MDBoxLayout):
+    pass
+
+
+# the main screen widget
 class MainScreen(MDBoxLayout):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.default = "Newmarket,Ontario"
+        # initial required variables for weather data
+        self.location = "Newmarket,Ontario"
+        self.unit = "metric"
         self.prev = ""
+        # a thread to run the update function as to not interfere with the main app process
         # popup dialog for changing locations
         self.picker = MDDialog(
             title="Change location",
@@ -72,12 +83,13 @@ class MainScreen(MDBoxLayout):
                     text="SAVE",
                     on_release=lambda x: self.save()
                 )
-            ]
+            ],
         )
         # popup dialog to show error message
-        self.weather_error = Dialog(
+        self.weather_error = MDDialog(
             type="custom",
             content_cls=ErrorContent(),
+            auto_dismiss=False,
             buttons=[
                 MDFlatButton(
                     text="OK",
@@ -86,7 +98,20 @@ class MainScreen(MDBoxLayout):
             ],
             button_direction="center",
         )
-        self.update()
+        # popup dialog to show internet error message
+        self.internet_error = MDDialog(
+            type="custom",
+            content_cls=ConErrorContent(),
+            auto_dismiss=False,
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    on_release=lambda x: self.internet_error.dismiss()
+                )
+            ],
+            button_direction="center",
+        )
+        Clock.schedule_once(self.update, 3)
 
     # function that updates today weather screen
     def today(self, unit, data):
@@ -98,6 +123,7 @@ class MainScreen(MDBoxLayout):
         self.temp_high.text = f"{data['main'][3]}{degree}"
         self.weather_condition.text = data['main'][4]
         self.weather_icon.source = f"./assets/icons/{data['main'][5]}.png"
+        self.weather_icon.reload()
         # misc today weather data values are updated here
         self.weather_precip.text = f"{data['misc'][0]}%"
         self.weather_wind.text = f"{data['misc'][1]} {units[unit][1]}"
@@ -107,25 +133,28 @@ class MainScreen(MDBoxLayout):
     def tmr(self, unit, data):
         # main tmr weather data values are updated here
         self.temp_low_tm.text = f"{data['main'][0]}{degree}"
-        self.temp_high.text = f"{data['main'][1]}{degree}"
-        self.weather_condition.text = data['main'][2]
-        self.weather_icon.source = f"./assets/icons/{data['main'][3]}.png"
+        self.temp_high_tm.text = f"{data['main'][1]}{degree}"
+        self.weather_condition_tm.text = data['main'][2]
+        self.weather_icon_tm.source = f"./assets/icons/{data['main'][3]}.png"
         # misc today weather data values are updated here
-        self.weather_precip.text = f"{data['misc'][0]}%"
-        self.weather_wind.text = f"{data['misc'][1]} {units[unit][1]}"
-        self.weather_humid.text = f"{data['misc'][2]}%"
+        self.weather_precip_tm.text = f"{data['misc'][0]}%"
+        self.weather_wind_tm.text = f"{data['misc'][1]} {units[unit][1]}"
+        self.weather_humid_tm.text = f"{data['misc'][2]}%"
 
-    def update(self):
-        weather = weatherData(self.default, "c").now_fetch()
-        weatherData(self.default, "c").tmr_fetch()
-        # check if a valid weather data has been returned
-        if weather != -1:
-            self.today("metric", weather)
+    def update(self, *args):
+        if internet().check():
+            weather_today = weatherData(self.location, units[self.unit][2]).now_fetch()
+            weather_tmr = weatherData(self.location, units[self.unit][2]).tmr_fetch()
+            # check if a valid weather data has been returned
+            if weather_today != -1 and weather_tmr != 1:
+                self.today(self.unit, weather_today)
+                self.tmr(self.unit, weather_tmr)
+            else:
+                self.weather_error.open()
+                self.location = self.prev
         else:
-            self.weather_error.open()
-            # check if there is a valid internet and switch back to last known good location
-            if internet().check():
-                self.default = self.prev
+            print("Could not verify a valid internet connection")
+            Clock.schedule_once(self.internet_error.open, 1)
 
     # clears text
     def clear_text(self, *args):
@@ -137,14 +166,14 @@ class MainScreen(MDBoxLayout):
         self.picker.content_cls.location.helper_text = "Field cannot be left blank"
         Clock.schedule_once(self.clear_text, .15)
 
-    # method that switches current weather location
+    # method that changes current weather location
     def save(self):
         # makes sure that user has entered in (city,region) format
         test = self.picker.content_cls.location.text.split(",")
         if self.picker.content_cls.location.text != "" and len(test) == 2:
             # backups current city name to revert when errors occur
-            self.prev = self.default
-            self.default = self.picker.content_cls.location.text
+            self.prev = self.location
+            self.location = self.picker.content_cls.location.text
             self.picker.content_cls.location.text = ""
             self.picker.dismiss()
             self.picker.content_cls.location.helper_text = "Field cannot be left blank"
