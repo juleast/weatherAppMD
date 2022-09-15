@@ -4,25 +4,6 @@
 <Content>:
     orientation: 'vertical'
 <MainScreen>:
-    # access variables relating to today weather data
-    temp: temp_text
-    temp_low: temp_low
-    temp_high: temp_high
-    temp_feels: temp_feels
-    city_name: city_name
-    weather_icon: weather_icon
-    weather_condition: weather_condition
-    weather_precip: weather_precip
-    weather_wind: weather_wind
-    weather_humid: weather_humid
-    # access variables related to tmr weather data
-    temp_low_tm: temp_low_tm
-    temp_high_tm: temp_high_tm
-    weather_icon_tm: weather_icon_tm
-    weather_condition_tm: weather_condition_tm
-    weather_precip_tm: weather_precip_tm
-    weather_wind_tm: weather_wind_tm
-    weather_humid_tm: weather_humid_tm
     # other widget variables
     nav_drawer: nav_drawer
     # the main navigation layout
@@ -62,14 +43,18 @@
                             # basic weather info
                             MDGridLayout:
                                 rows: 2
-                                padding: 20
+                                padding: (20, "10dp", 20, 20)
                                 # temperature and condition
                                 MDGridLayout:
                                     cols: 2
                                     size_hint_y: .6
-                                    #
                                     MDGridLayout:
-                                        rows: 2
+                                        rows: 3
+                                        MDLabel:
+                                            id: date
+                                            text: "mm/dd, HH:MM"
+                                            halign: "center"
+                                            size_hint_y: .1
                                         # labels that show low and high temperatures
                                         MDGridLayout:
                                             cols: 2
@@ -100,6 +85,7 @@
                                         # layout that has labels for main temperature and feels like temperature
                                         MDGridLayout:
                                             rows: 2
+                                            size_hint_y: .6
                                             MDLabel:
                                                 id: temp_text
                                                 text: "0°"
@@ -109,14 +95,14 @@
                                                 id: temp_feels
                                                 text: "Feels Like 0°"
                                                 font_size: "15sp"
+                                                halign: "center"
                                                 size_hint_y: .3
-                                                halign: 'center'
                                     # layout that has weather icon and conditions
                                     MDGridLayout:
-                                        rows: 3
+                                        rows: 2
                                         # emtpy label to level out the size of the icon with the main temp label
                                         MDLabel:
-                                            size_hint_y: .2
+                                            size_hint_y: .4
                                         MDGridLayout:
                                             rows: 2
                                             Image:
@@ -127,12 +113,11 @@
                                                 id: weather_condition
                                                 text: "Clear"
                                                 font_size: "15sp"
-                                                size_hint_y: .3
+                                                size_hint_y: .2
                                                 halign: 'center'
                                 # misc weather data
                                 MDGridLayout:
                                     rows: 4
-                                    size_hint_y: 1
                                     MDGridLayout:
                                         size_hint_y: .2
                                         rows: 2
@@ -178,14 +163,19 @@
                             # basic weather info
                             MDGridLayout:
                                 rows: 2
-                                padding: 20
+                                padding: (20, "10dp", 20, 20)
                                 # temperature and condition
                                 MDGridLayout:
                                     cols: 2
                                     size_hint_y: .6
-                                    #
                                     MDGridLayout:
-                                        rows: 2
+                                        rows: 3
+                                        # label to show date
+                                        MDLabel:
+                                            id: date_tmr
+                                            text: "mm/dd, HH:MM"
+                                            halign: "center"
+                                            size_hint_y: .1
                                         # labels that show low and high temperatures
                                         MDGridLayout:
                                             cols: 2
@@ -213,42 +203,28 @@
                                                     text: "0°"
                                                     font_size: "15sp"
                                                     halign: 'left'
-                                        # layout that has labels for main temperature and feels like temperature
-                                        MDGridLayout:
-                                            rows: 2
-                                            MDLabel:
-                                                id: temp_text_tm
-                                                text: "0°"
-                                                halign: 'center'
-                                                font_size: "56sp"
-                                            MDLabel:
-                                                id: temp_feels_tm
-                                                text: "Feels Like 0°"
-                                                font_size: "15sp"
-                                                size_hint_y: .3
-                                                halign: 'center'
-                                    # layout that has weather icon and conditions
+                                        # shows weather condition for tmr weather
+                                        MDLabel:
+                                            id: weather_condition_tm
+                                            text: "Clear"
+                                            font_size: "15sp"
+                                            halign: "center"
+                                            size_hint_y: .6
+                                    # layout that has weather icon
                                     MDGridLayout:
                                         rows: 3
-                                        # emtpy label to level out the size of the icon with the main temp label
                                         MDLabel:
-                                            size_hint_y: .2
-                                        MDGridLayout:
-                                            rows: 2
-                                            Image:
-                                                id: weather_icon_tm
-                                                valign: 'center'
-                                                source: "./assets/icons/clear-day.png"
-                                            MDLabel:
-                                                id: weather_condition_tm
-                                                text: "Clear"
-                                                font_size: "15sp"
-                                                size_hint_y: .3
-                                                halign: 'center'
+                                            size_hint_y: .3
+                                        Image:
+                                            id: weather_icon_tm
+                                            valign: 'center'
+                                            source: "./assets/icons/clear-day.png"
+                                        MDLabel:
+                                            size_hint_y: .3
+
                                 # misc weather data
                                 MDGridLayout:
                                     rows: 4
-                                    size_hint_y: 1
                                     MDGridLayout:
                                         size_hint_y: .2
                                         rows: 2

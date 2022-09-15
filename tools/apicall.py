@@ -3,7 +3,7 @@ import requests as req
 from requests.exceptions import ConnectionError
 from datetime import datetime
 from datetime import timedelta
-from math import trunc
+from calendar import day_name
 
 # api key for weather service. modify these to use your own
 api_keys = ["6Q4JUN7Y8TYWPAE9SDJ59V6V6", "LQFCHSKEJDLP43RMKJW4G53XJ"]
@@ -65,7 +65,7 @@ class weatherData:
             feels_like = str_r(data_now['feelslike'])
             min_temp = str_r(data_d['tempmin'])
             max_temp = str_r(data_d['tempmax'])
-            descr = data_now['conditions'].title()
+            descr = data_now['conditions']
             icon = data_now['icon']
             # misc weather data
             precip = str_r(data_now['precipprob'])
@@ -75,7 +75,7 @@ class weatherData:
             main = [temp, feels_like, min_temp, max_temp, descr, icon]
             misc = [precip, windspeed, humidity]
             # return all acquired data as a dictionary
-            return {'main': main, 'misc': misc, 'location': city}
+            return {'main': main, 'misc': misc, 'location': city, 'date': today.strftime("%m/%d, %I:%M %p")}
         else:
             print("An error has occurred in fetching weather data")
             return -1
@@ -98,7 +98,7 @@ class weatherData:
             # main weather data
             min_temp = str_r(data_d['tempmin'])
             max_temp = str_r(data_d['tempmax'])
-            descr = data_d['conditions'].title()
+            descr = data_d['description']
             # misc weather data
             precip = str_r(data_d['precipprob'])
             windspeed = str_r(data_d['windspeed'])
@@ -108,7 +108,7 @@ class weatherData:
             main = [min_temp, max_temp, descr, icon]
             misc = [precip, windspeed, humidity]
             # return all acquired data as a dictionary
-            return {'main': main, 'misc': misc}
+            return {'main': main, 'misc': misc, 'date': f"{tmr_date.strftime('%m/%d')}, {day_name[tmr_date.weekday()]}"}
 
         else:
             print("An error has occurred in fetching weather data for tmr")

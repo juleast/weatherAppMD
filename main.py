@@ -6,7 +6,7 @@ from kivymd.uix.button import MDFlatButton, MDRaisedButton
 # kivy imports
 from kivy import require
 from kivy.lang import Builder
-from kivy.clock import Clock
+from kivy.clock import Clock, mainthread
 from kivy.core.window import Window
 from kivy.properties import OptionProperty
 from kivy.uix.screenmanager import FallOutTransition, RiseInTransition
@@ -111,36 +111,46 @@ class MainScreen(MDBoxLayout):
             ],
             button_direction="center",
         )
-        Clock.schedule_once(self.update, 3)
+        Clock.schedule_once(self.get_update, 3)
 
-    # function that updates today weather screen
+    def get_update(self, *args):
+        Thread(target=self.update, args=(), daemon=True).start()
+
+    # method that updates today weather screen
     def today(self, unit, data):
-        self.city_name.title = data['location']
+        # update location title in topappbar
+        self.ids.city_name.title = data['location']
+        # update date
+        self.ids.date.text = data["date"]
         # main today weather data values are updated here
-        self.temp.text = f"{data['main'][0]}{units[unit][0]}"
-        self.temp_feels.text = f"Feels like {data['main'][1]}{degree}"
-        self.temp_low.text = f"{data['main'][2]}{degree}"
-        self.temp_high.text = f"{data['main'][3]}{degree}"
-        self.weather_condition.text = data['main'][4]
-        self.weather_icon.source = f"./assets/icons/{data['main'][5]}.png"
-        self.weather_icon.reload()
+        self.ids.temp_text.text = f"{data['main'][0]}{units[unit][0]}"
+        self.ids.temp_feels.text = f"Feels like {data['main'][1]}{degree}"
+        self.ids.temp_low.text = f"{data['main'][2]}{degree}"
+        self.ids.temp_high.text = f"{data['main'][3]}{degree}"
+        self.ids.weather_condition.text = data['main'][4]
+        self.ids.weather_icon.source = f"./assets/icons/{data['main'][5]}.png"
+        self.ids.weather_icon.reload()
         # misc today weather data values are updated here
-        self.weather_precip.text = f"{data['misc'][0]}%"
-        self.weather_wind.text = f"{data['misc'][1]} {units[unit][1]}"
-        self.weather_humid.text = f"{data['misc'][2]}%"
+        self.ids.weather_precip.text = f"{data['misc'][0]}%"
+        self.ids.weather_wind.text = f"{data['misc'][1]} {units[unit][1]}"
+        self.ids.weather_humid.text = f"{data['misc'][2]}%"
 
-    # function that updates tmr weather screen
+    # method that updates tmr weather screen
     def tmr(self, unit, data):
+        # update date
+        self.ids.date_tmr.text = data["date"]
         # main tmr weather data values are updated here
-        self.temp_low_tm.text = f"{data['main'][0]}{degree}"
-        self.temp_high_tm.text = f"{data['main'][1]}{degree}"
-        self.weather_condition_tm.text = data['main'][2]
-        self.weather_icon_tm.source = f"./assets/icons/{data['main'][3]}.png"
+        self.ids.temp_low_tm.text = f"{data['main'][0]}{degree}"
+        self.ids.temp_high_tm.text = f"{data['main'][1]}{degree}"
+        self.ids.weather_condition_tm.text = data['main'][2]
+        self.ids.weather_icon_tm.source = f"./assets/icons/{data['main'][3]}.png"
         # misc today weather data values are updated here
-        self.weather_precip_tm.text = f"{data['misc'][0]}%"
-        self.weather_wind_tm.text = f"{data['misc'][1]} {units[unit][1]}"
-        self.weather_humid_tm.text = f"{data['misc'][2]}%"
+        self.ids.weather_precip_tm.text = f"{data['misc'][0]}%"
+        self.ids.weather_wind_tm.text = f"{data['misc'][1]} {units[unit][1]}"
+        self.ids.weather_humid_tm.text = f"{data['misc'][2]}%"
 
+    # the main update method for screen
+    @mainthread
     def update(self, *args):
         if internet().check():
             weather_today = weatherData(self.location, units[self.unit][2]).now_fetch()
