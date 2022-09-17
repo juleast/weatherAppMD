@@ -3,6 +3,8 @@ from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton, MDRaisedButton
+from kivymd.uix.selectioncontrol import MDSwitch
+from kivymd.uix.list import IRightBodyTouch
 # kivy imports
 from kivy import require
 from kivy.lang import Builder
@@ -12,14 +14,18 @@ from kivy.properties import OptionProperty
 from kivy.uix.screenmanager import FallOutTransition, RiseInTransition
 from kivy.loader import Loader
 
+
 # local imports
 from tools.apicall import weatherData
 from tools.check import internet
+from tools.datasaver import save
 from threading import Thread
+from functools import partial
 
 # some misc options
 Loader.loading_image = "./assets/images/bg/25501.jpg"
 require('2.1.0')
+Window.softinput_mode = 'below_target'
 
 # load the kv files
 Builder.load_file('weather.kv')
@@ -28,12 +34,10 @@ Builder.load_file('dialogcontents.kv')
 # variables for special characters and units
 units = {'metric': ["°C", "km/h", "c"], 'us': ["°F", "mph", "f"]}
 degree = "°"
-unit_change = [False]
 
 
 # dialog class to add an option to change button direction
 class MDDialog(MDDialog):
-
     button_direction = OptionProperty(
         "right", options=["left", "right", "center"]
     )
@@ -44,21 +48,6 @@ class MDDialog(MDDialog):
         self.ids.root_button_box.anchor_x = self.button_direction
 
 
-# widget for location changer popup
-class PickerContent(MDBoxLayout):
-    pass
-
-
-# widget for fetch error message popup
-class ErrorContent(MDBoxLayout):
-    pass
-
-
-# widget for internet error popup
-class ConErrorContent(MDBoxLayout):
-    pass
-
-
 # the main screen widget
 class MainScreen(MDBoxLayout):
     def __init__(self, *args, **kwargs):
@@ -67,7 +56,9 @@ class MainScreen(MDBoxLayout):
         self.location = "Newmarket,Ontario"
         self.unit = "metric"
         self.prev = ""
-        # a thread to run the update function as to not interfere with the main app process
+        # variables to store in the json file
+        self.def_location = ""
+        self.def_unit = ""
         # popup dialog for changing locations
         self.picker = MDDialog(
             title="Change location",
@@ -77,13 +68,46 @@ class MainScreen(MDBoxLayout):
             buttons=[
                 MDFlatButton(
                     text="CANCEL",
-                    on_release=lambda x: self.cancel()
+                    on_release=lambda x: self.cancel(self.picker)
+                ),
+                MDRaisedButton(
+                    text="SAVE",
+                    on_release=lambda x: self.reload()
+                )
+            ],
+        )
+        # popup dialog for setting default location
+        self.def_picker = MDDialog(
+            title="Set default location",
+            type="custom",
+            content_cls=PickerContent(),
+            auto_dismiss=False,
+            buttons=[
+                MDFlatButton(
+                    text="CANCEL",
+                    on_release=lambda x: self.cancel(self.def_picker)
                 ),
                 MDRaisedButton(
                     text="SAVE",
                     on_release=lambda x: self.save()
                 )
+            ]
+        )
+        # popup dialog for setting default measurement unit
+        self.unit_picker = MDDialog(
+            title="Change weather unit",
+            type="custom",
+            content_cls=UnitChangerContent(),
+            auto_dismiss=False,
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    theme_text_color="Custom",
+                    text_color=MainApp().theme_cls.primary_color,
+                    on_release=lambda x: self.unit_change()
+                )
             ],
+            button_direction="center"
         )
         # popup dialog to show error message
         self.weather_error = MDDialog(
@@ -93,6 +117,8 @@ class MainScreen(MDBoxLayout):
             buttons=[
                 MDFlatButton(
                     text="OK",
+                    theme_text_color="Custom",
+                    text_color=MainApp().theme_cls.primary_color,
                     on_release=lambda x: self.weather_error.dismiss()
                 )
             ],
@@ -106,6 +132,8 @@ class MainScreen(MDBoxLayout):
             buttons=[
                 MDFlatButton(
                     text="OK",
+                    theme_text_color="Custom",
+                    text_color=MainApp().theme_cls.primary_color,
                     on_release=lambda x: self.internet_error.dismiss()
                 )
             ],
@@ -113,8 +141,27 @@ class MainScreen(MDBoxLayout):
         )
         Clock.schedule_once(self.get_update, 3)
 
+    # method that cancels unit change dialog
     def get_update(self, *args):
         Thread(target=self.update, args=(), daemon=True).start()
+
+    # the main update method for screen
+    @mainthread
+    def update(self, *args):
+        if internet().check():
+            weather_today = weatherData(self.location, units[self.unit][2]).now_fetch()
+            weather_tmr = weatherData(self.location, units[self.unit][2]).tmr_fetch()
+            # check if a valid weather data has been returned
+            if weather_today != -1 and weather_tmr != 1:
+                self.today(self.unit, weather_today)
+                self.tmr(self.unit, weather_tmr)
+            else:
+                self.weather_error.open()
+                self.location = self.prev
+        else:
+            print("Could not verify a valid internet connection")
+            self.location = self.prev
+            Clock.schedule_once(self.internet_error.open, 1)
 
     # method that updates today weather screen
     def today(self, unit, data):
@@ -149,35 +196,30 @@ class MainScreen(MDBoxLayout):
         self.ids.weather_wind_tm.text = f"{data['misc'][1]} {units[unit][1]}"
         self.ids.weather_humid_tm.text = f"{data['misc'][2]}%"
 
-    # the main update method for screen
-    @mainthread
-    def update(self, *args):
-        if internet().check():
-            weather_today = weatherData(self.location, units[self.unit][2]).now_fetch()
-            weather_tmr = weatherData(self.location, units[self.unit][2]).tmr_fetch()
-            # check if a valid weather data has been returned
-            if weather_today != -1 and weather_tmr != 1:
-                self.today(self.unit, weather_today)
-                self.tmr(self.unit, weather_tmr)
-            else:
-                self.weather_error.open()
-                self.location = self.prev
+    # method that will get input and set a new default location
+    def save(self):
+        # makes sure that user has entered in (city,region) format
+        test = self.def_picker.content_cls.location.text.split(",")
+        if self.def_picker.content_cls.location.text != "" and len(test) == 2:
+            self.def_location = self.def_picker.content_cls.location.text
+            self.def_picker.content_cls.location.text = ""
+            self.def_picker.dismiss()
+            self.def_picker.content_cls.location.helper_text = "Field cannot be blank"
         else:
-            print("Could not verify a valid internet connection")
-            Clock.schedule_once(self.internet_error.open, 1)
+            self.def_picker.content_cls.location.helper_text = "Must be (city, region) format"
+            self.def_picker.content_cls.location.error = True
 
-    # clears text
-    def clear_text(self, *args):
-        self.picker.content_cls.location.text = ""
-
-    # method to close location switcher popup
-    def cancel(self):
-        self.picker.dismiss()
-        self.picker.content_cls.location.helper_text = "Field cannot be left blank"
-        Clock.schedule_once(self.clear_text, .15)
+    # method that will change weather measurement unit based on switch
+    def unit_change(self):
+        state = self.unit_picker.content_cls.ids.unit_switch.active
+        if state:
+            self.def_unit = "us"
+        elif not state:
+            self.def_unit = "metric"
+        self.unit_picker.dismiss()
 
     # method that changes current weather location
-    def save(self):
+    def reload(self):
         # makes sure that user has entered in (city,region) format
         test = self.picker.content_cls.location.text.split(",")
         if self.picker.content_cls.location.text != "" and len(test) == 2:
@@ -187,12 +229,21 @@ class MainScreen(MDBoxLayout):
             self.picker.content_cls.location.text = ""
             self.picker.dismiss()
             self.picker.content_cls.location.helper_text = "Field cannot be left blank"
-            Clock.schedule_once(self.clear_text, .15)
             self.nav_drawer.set_state("close")
             self.update()
         else:
             self.picker.content_cls.location.helper_text = "Must be (city,region) format"
             self.picker.content_cls.location.error = True
+
+    # clears text
+    def clear_text(self, popup, *args):
+        popup.content_cls.location.text = ""
+
+    # method to close location switcher popup
+    def cancel(self, popup, *args):
+        popup.dismiss()
+        popup.content_cls.location.helper_text = "Field cannot be left blank"
+        Clock.schedule_once(partial(self.clear_text, popup), .15)
 
     # method that switches to settings screen
     def open_settings(self):
@@ -204,6 +255,38 @@ class MainScreen(MDBoxLayout):
     def open_main(self):
         self.ids.screenmanager.transition = FallOutTransition(duration=0.2)
         self.ids.screenmanager.current = "main"
+        # get set data to write into json save file
+        data = {
+            'location': self.def_location,
+            'unit': self.def_unit
+        }
+        s = save(data)
+        s.write()
+
+
+# widget for location changer popup
+class PickerContent(MDBoxLayout):
+    pass
+
+
+# widget for weather unit changer popup
+class UnitChangerContent(MDBoxLayout):
+    pass
+
+
+# widget container to house the switch
+class RightBox(IRightBodyTouch, MDSwitch):
+    pass
+
+
+# widget for fetch error message popup
+class ErrorContent(MDBoxLayout):
+    pass
+
+
+# widget for internet error popup
+class ConErrorContent(MDBoxLayout):
+    pass
 
 
 # main app class

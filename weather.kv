@@ -269,9 +269,6 @@
                                 halign: 'center'
 
             Screen:
-                canvas.before:
-                    Color:
-                        rgba: 1, 1, 1, 1
                 name: "settings"
                 MDGridLayout:
                     rows: 2
@@ -279,20 +276,26 @@
                         left_action_items: [["arrow-left", lambda x: root.open_main()]]
                     MDScrollView:
                         MDList:
+                            padding: 0
                             adaptive_height: True
                             ThreeLineListItem:
                                 text: "Default location"
                                 divider: "Full"
                                 secondary_text: "Change the default location for when"
                                 tertiary_text: "the app is launched."
-                                on_release: print("yeet")
-                            TwoLineListItem:
-                                padding: (0, "10dp", 0, 0)
+                                on_release: root.def_picker.open()
+                            ThreeLineListItem:
                                 text: "Unit of measurement"
                                 secondary_text: "Change unit of measure used for"
                                 tertiary_text: "weather data."
-                            TwoLineListItem:
-                                text: ""
+                                on_release: root.unit_picker.open()
+                MDIcon:
+                    icon: "cog"
+                    font_size: "200sp"
+                    theme_text_color: "Custom"
+                    text_color: "#60675B"
+                    pos_hint: {"center_x": .5, "center_y": .5}
+                    opacity: .5
 
 
             Screen:

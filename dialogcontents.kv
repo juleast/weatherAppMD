@@ -19,8 +19,8 @@
     size_hint_y: None
     height: "40dp"
     MDLabel:
-        text: "Error fetching weather data"
-        font_size: "20sp"
+        text: "Error fetching weather data. Reverting back to previous location."
+        font_size: "17sp"
 
 <ConErrorContent>:
     orientation: 'vertical'
@@ -28,5 +28,23 @@
     size_hint_y: None
     height: "40dp"
     MDLabel:
-        text: "Connection error. Check for valid internet connection"
+        text: "Connection error. Check for valid internet connection."
         font_size: "17sp"
+
+<UnitChangerContent>:
+    orientation: 'vertical'
+    spacing: "5dp"
+    size_hint_y: None
+    height: "50dp"
+    OneLineRightIconListItem:
+        text: "Switch °F/°C"
+        divider: None
+        _no_ripple_effect: True
+        on_size: self.ids._right_container.height = dp(64)
+        RightBox:
+            id: unit_switch
+            icon_inactive: "temperature-celsius"
+            icon_active: "temperature-fahrenheit"
+            on_active: print(self.active)
+
+
