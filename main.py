@@ -17,10 +17,11 @@ from kivy.loader import Loader
 
 # local imports
 from tools.apicall import weatherData
-from tools.check import internet
-from tools.datasaver import save
+from tools.check import internet, filecheck
+from tools.filemanager import rw
 from threading import Thread
 from functools import partial
+from time import sleep
 
 # some misc options
 Loader.loading_image = "./assets/images/bg/25501.jpg"
@@ -52,13 +53,18 @@ class MDDialog(MDDialog):
 class MainScreen(MDBoxLayout):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # initial required variables for weather data
-        self.location = "Newmarket,Ontario"
-        self.unit = "metric"
+        if filecheck().file():
+            r = rw()
+            rd = r.read()
+            # initial required variables for weather data
+            self.location = rd['location']
+            self.unit = rd['unit']
+        else:
+            self.location = "Newmarket,Ontario"
+            self.unit = "metric"
         self.prev = ""
         # variables to store in the json file
-        self.def_location = ""
-        self.def_unit = ""
+        self.def_location = self.location
         # popup dialog for changing locations
         self.picker = MDDialog(
             title="Change location",
@@ -141,6 +147,10 @@ class MainScreen(MDBoxLayout):
         )
         Clock.schedule_once(self.get_update, 3)
 
+    def read(self):
+        rs = rw()
+        print(rs.read())
+
     # method that cancels unit change dialog
     def get_update(self, *args):
         Thread(target=self.update, args=(), daemon=True).start()
@@ -148,7 +158,7 @@ class MainScreen(MDBoxLayout):
     # the main update method for screen
     @mainthread
     def update(self, *args):
-        if internet().check():
+        if internet().ping():
             weather_today = weatherData(self.location, units[self.unit][2]).now_fetch()
             weather_tmr = weatherData(self.location, units[self.unit][2]).tmr_fetch()
             # check if a valid weather data has been returned
@@ -213,9 +223,9 @@ class MainScreen(MDBoxLayout):
     def unit_change(self):
         state = self.unit_picker.content_cls.ids.unit_switch.active
         if state:
-            self.def_unit = "us"
+            self.unit = "us"
         elif not state:
-            self.def_unit = "metric"
+            self.unit = "metric"
         self.unit_picker.dismiss()
 
     # method that changes current weather location
@@ -255,13 +265,10 @@ class MainScreen(MDBoxLayout):
     def open_main(self):
         self.ids.screenmanager.transition = FallOutTransition(duration=0.2)
         self.ids.screenmanager.current = "main"
-        # get set data to write into json save file
-        data = {
-            'location': self.def_location,
-            'unit': self.def_unit
-        }
-        s = save(data)
-        s.write()
+        loc_arr = [self.location, self.def_location]
+        unit = self.unit
+        w = rw()
+        w.write(loc_arr, unit)
 
 
 # widget for location changer popup
@@ -299,6 +306,15 @@ class MainApp(MDApp):
         self.theme_cls.material_style = "M3"
         return MainScreen()
 
+    # last save function for when the app closes
+    def last_save(self):
+        loc_arr = [MainScreen().location, MainScreen().def_location]
+        unit = MainScreen().unit
+        w = rw()
+        w.write(loc_arr, unit)
+        print("success!")
+
 
 if __name__ == "__main__":
     MainApp().run()
+    MainApp().last_save()
