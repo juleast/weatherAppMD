@@ -13,7 +13,9 @@ from kivy.core.window import Window
 from kivy.properties import OptionProperty
 from kivy.uix.screenmanager import FallOutTransition, RiseInTransition
 from kivy.loader import Loader
-
+# others
+from plyer import gps
+from geopy.geocoders import Nominatim
 
 # local imports
 from tools.apicall import weatherData
@@ -21,12 +23,12 @@ from tools.check import internet, filecheck
 from tools.filemanager import rw
 from threading import Thread
 from functools import partial
-from time import sleep
 
 # some misc options
 Loader.loading_image = "./assets/images/bg/25501.jpg"
 require('2.1.0')
 Window.softinput_mode = 'below_target'
+geolocator = Nominatim(user_agent="simple-weather")
 
 # load the kv files
 Builder.load_file('weather.kv')
@@ -35,6 +37,8 @@ Builder.load_file('dialogcontents.kv')
 # variables for special characters and units
 units = {'metric': ["°C", "km/h", "c"], 'us': ["°F", "mph", "f"]}
 degree = "°"
+# variable for permission status
+permission = ["ungranted"]
 
 
 # dialog class to add an option to change button direction
@@ -53,18 +57,12 @@ class MDDialog(MDDialog):
 class MainScreen(MDBoxLayout):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if filecheck().file():
-            r = rw()
-            rd = r.read()
-            # initial required variables for weather data
-            self.location = rd['location']
-            self.unit = rd['unit']
-        else:
-            self.location = "Newmarket,Ontario"
-            self.unit = "metric"
-        self.prev = ""
-        # variables to store in the json file
-        self.def_location = self.location
+        # some init variables
+        self.def_location = None
+        self.unit = None
+        self.prev = None
+        self.location = ""
+        self.coords = ""
         # popup dialog for changing locations
         self.picker = MDDialog(
             title="Change location",
@@ -145,11 +143,89 @@ class MainScreen(MDBoxLayout):
             ],
             button_direction="center",
         )
-        Clock.schedule_once(self.get_update, 3)
+        self.gps_error = MDDialog(
+            title="Please allow location permissions",
+            type="custom",
+            content_cls=GPSErrorContent(),
+            auto_dismiss=False,
+            buttons=[
+                MDFlatButton(
+                    text="Grant permissions",
+                    theme_text_color="Custom",
+                    text_color=MainApp().theme_cls.primary_color,
+                    on_release=lambda x: self.regrant_perms()
+                )
+            ],
+            button_direction="center"
+        )
+        Clock.schedule_once(self.request_android_permissions, 4)
 
-    def read(self):
-        rs = rw()
-        print(rs.read())
+    def init(self, *args):
+        # checks if location permissions have been granted
+        if permission[0] == "granted":
+            # configure the gps locator
+            gps.configure(on_location=self.get_location)
+            self.start()
+            while self.coords == "":
+                print(self.coords + " none")
+            # save gps location data
+            location = geolocator.reverse(self.coords).raw
+            city = location['address']['city']
+            region = location['address']['state']
+            # checks if there is a save file available
+            if filecheck().file():
+                r = rw()
+                rd = r.read()
+                # initial required variables for weather data
+                self.location = rd['location']
+                self.unit = rd['unit']
+            else:
+                self.location = f"{city},{region}"
+                self.unit = "metric"
+            self.prev = ""
+            # variables to store in the json file
+            self.def_location = self.location
+            # change data on settings page for initial
+            self.def_picker.content_cls.ids.current_location.text = f"{self.location}"
+            self.picker.content_cls.ids.current_location.text = f"{self.location}"
+            if self.unit == "metric":
+                self.unit_picker.content_cls.ids.unit_switch.active = False
+            else:
+                self.unit_picker.content_cls.ids.unit_switch.active = True
+            # runs the update function
+            Clock.schedule_once(self.get_update)
+
+    # method to request location permissions of device
+    def request_android_permissions(self, *args):
+        from android.permissions import Permission, request_permissions
+        @mainthread
+        def callback(permissions, results):
+            if all([res for res in results]):
+                print("All permissions granted.")
+                permission[0] = "granted"
+                self.init()
+            else:
+                self.gps_error.open()
+
+        request_permissions([Permission.ACCESS_COARSE_LOCATION,
+                             Permission.ACCESS_FINE_LOCATION], callback)
+
+    # method to grant location permissions
+    def regrant_perms(self):
+        self.gps_error.dismiss()
+        self.request_android_permissions()
+
+    # method to start collecting gps location data
+    def start(self, *args):
+        gps.start(minTime=1000, minDistance=0)
+
+    # method that will get the current gps location
+    def get_location(self, **kwargs):
+        lat = kwargs['lat']
+        lon = kwargs['lon']
+        self.coords = f"{lat}, {lon}"
+        print(kwargs)
+        gps.stop()
 
     # method that cancels unit change dialog
     def get_update(self, *args):
@@ -158,6 +234,7 @@ class MainScreen(MDBoxLayout):
     # the main update method for screen
     @mainthread
     def update(self, *args):
+        # checks for internet first
         if internet().ping():
             weather_today = weatherData(self.location, units[self.unit][2]).now_fetch()
             weather_tmr = weatherData(self.location, units[self.unit][2]).tmr_fetch()
@@ -168,9 +245,11 @@ class MainScreen(MDBoxLayout):
             else:
                 self.weather_error.open()
                 self.location = self.prev
+                self.picker.content_cls.ids.current_location.text = f"{self.location}"
         else:
             print("Could not verify a valid internet connection")
-            self.location = self.prev
+            if self.prev != "":
+                self.location = self.prev
             Clock.schedule_once(self.internet_error.open, 1)
 
     # method that updates today weather screen
@@ -186,7 +265,6 @@ class MainScreen(MDBoxLayout):
         self.ids.temp_high.text = f"{data['main'][3]}{degree}"
         self.ids.weather_condition.text = data['main'][4]
         self.ids.weather_icon.source = f"./assets/icons/{data['main'][5]}.png"
-        self.ids.weather_icon.reload()
         # misc today weather data values are updated here
         self.ids.weather_precip.text = f"{data['misc'][0]}%"
         self.ids.weather_wind.text = f"{data['misc'][1]} {units[unit][1]}"
@@ -206,18 +284,19 @@ class MainScreen(MDBoxLayout):
         self.ids.weather_wind_tm.text = f"{data['misc'][1]} {units[unit][1]}"
         self.ids.weather_humid_tm.text = f"{data['misc'][2]}%"
 
-    # method that will get input and set a new default location
+    # method that will set a new default location for the user the weather is not updated here
     def save(self):
         # makes sure that user has entered in (city,region) format
-        test = self.def_picker.content_cls.location.text.split(",")
-        if self.def_picker.content_cls.location.text != "" and len(test) == 2:
-            self.def_location = self.def_picker.content_cls.location.text
-            self.def_picker.content_cls.location.text = ""
+        test = self.def_picker.content_cls.ids.location.text.split(",")
+        if self.def_picker.content_cls.ids.location.text != "" and len(test) == 2:
+            self.def_location = self.def_picker.content_cls.ids.location.text
+            self.def_picker.content_cls.ids.location.text = ""
             self.def_picker.dismiss()
-            self.def_picker.content_cls.location.helper_text = "Field cannot be blank"
+            self.def_picker.content_cls.ids.location.helper_text = "Field cannot be blank"
+            self.def_picker.content_cls.ids.current_location.text = f"{self.def_location}"
         else:
-            self.def_picker.content_cls.location.helper_text = "Must be (city, region) format"
-            self.def_picker.content_cls.location.error = True
+            self.def_picker.content_cls.ids.location.helper_text = "Must be (city, region) format"
+            self.def_picker.content_cls.ids.location.error = True
 
     # method that will change weather measurement unit based on switch
     def unit_change(self):
@@ -231,44 +310,49 @@ class MainScreen(MDBoxLayout):
     # method that changes current weather location
     def reload(self):
         # makes sure that user has entered in (city,region) format
-        test = self.picker.content_cls.location.text.split(",")
-        if self.picker.content_cls.location.text != "" and len(test) == 2:
+        test = self.picker.content_cls.ids.location.text.split(",")
+        if self.picker.content_cls.ids.location.text != "" and len(test) == 2:
             # backups current city name to revert when errors occur
             self.prev = self.location
-            self.location = self.picker.content_cls.location.text
-            self.picker.content_cls.location.text = ""
+            self.location = self.picker.content_cls.ids.location.text
+            self.picker.content_cls.ids.location.text = ""
             self.picker.dismiss()
-            self.picker.content_cls.location.helper_text = "Field cannot be left blank"
+            self.picker.content_cls.ids.current_location.text = f"{self.location}"
+            self.picker.content_cls.ids.location.helper_text = "Field cannot be left blank"
             self.nav_drawer.set_state("close")
             self.update()
         else:
-            self.picker.content_cls.location.helper_text = "Must be (city,region) format"
-            self.picker.content_cls.location.error = True
+            self.picker.content_cls.ids.location.helper_text = "Must be (city,region) format"
+            self.picker.content_cls.ids.location.error = True
 
     # clears text
     def clear_text(self, popup, *args):
-        popup.content_cls.location.text = ""
+        popup.content_cls.ids.location.text = ""
 
-    # method to close location switcher popup
+    # method to close location switcher popup and also clear text
     def cancel(self, popup, *args):
         popup.dismiss()
-        popup.content_cls.location.helper_text = "Field cannot be left blank"
+        popup.content_cls.ids.location.helper_text = "Field cannot be left blank"
         Clock.schedule_once(partial(self.clear_text, popup), .15)
 
-    # method that switches to settings screen
+    # method that switches to the settings screen
     def open_settings(self):
         self.ids.screenmanager.transition = RiseInTransition(duration=0.2)
         self.ids.screenmanager.current = 'settings'
         self.nav_drawer.set_state("close")
 
-    # method that switches to main screen
+    # method that switches to the main screen and saves any changes done in settings
     def open_main(self):
         self.ids.screenmanager.transition = FallOutTransition(duration=0.2)
         self.ids.screenmanager.current = "main"
-        loc_arr = [self.location, self.def_location]
-        unit = self.unit
-        w = rw()
-        w.write(loc_arr, unit)
+
+        def save_settings():
+            loc_arr = [self.location, self.def_location]
+            unit = self.unit
+            w = rw()
+            w.write(loc_arr, unit)
+
+        Thread(target=save_settings, args=(), daemon=True).start()
 
 
 # widget for location changer popup
@@ -293,6 +377,11 @@ class ErrorContent(MDBoxLayout):
 
 # widget for internet error popup
 class ConErrorContent(MDBoxLayout):
+    pass
+
+
+# widget for gps error popup
+class GPSErrorContent(MDBoxLayout):
     pass
 
 

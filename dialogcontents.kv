@@ -3,15 +3,26 @@
     orientation: 'vertical'
     spacing: "12dp"
     size_hint_y: None
-    height: "60dp"
-    MDTextField:
-        id: location
-        hint_text: "Enter in (city,region) format"
-        required: True
-        helper_text: "Field cannot be left blank"
-        helper_text_mode: "on_error"
-        on_focus: if self.focused and self.error: self.error = False
-        on_text: if self.focused and not self.text: self.error = False
+    height: "80dp"
+    MDGridLayout:
+        rows: 3
+        MDLabel:
+            text: "Current: "
+            size_hint_y: .1
+        MDLabel:
+            id: current_location
+            text: ""
+            halign: "center"
+            size_hint_y: .1
+        MDTextField:
+            id: location
+            hint_text: "Enter in (city,region) format"
+            required: True
+            keyboard_suggestions: True
+            helper_text: "Field cannot be left blank"
+            helper_text_mode: "on_error"
+            on_focus: if self.focused and self.error: self.error = False
+            on_text: if self.focused and not self.text: self.error = False
 
 <ErrorContent>:
     orientation: 'vertical'
@@ -46,5 +57,13 @@
             icon_inactive: "temperature-celsius"
             icon_active: "temperature-fahrenheit"
             on_active: print(self.active)
+
+<GPSErrorContent>:
+    orientation: "vertical"
+    spacing: dp(5)
+    size_hint_y: None
+    height: "50dp"
+    MDLabel:
+        text: "The app cannot function without permissions."
 
 

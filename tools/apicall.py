@@ -8,8 +8,7 @@ from calendar import day_name
 # api key for weather service. modify these to use your own
 api_keys = ["6Q4JUN7Y8TYWPAE9SDJ59V6V6", "LQFCHSKEJDLP43RMKJW4G53XJ"]
 # the base url for the weather service
-base_urls = ["https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline",
-             "https://freegeoip.live/json"]
+base_urls = ["https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline"]
 # units dictionary
 temp_units = {"c": "metric", "f": "us"}
 
@@ -113,22 +112,3 @@ class weatherData:
         else:
             print("An error has occurred in fetching weather data for tmr")
 
-
-# class that gets the current location of the device based on the IP address
-class getLoc:
-    def __init__(self):
-        pass
-
-    def fetch(self):
-        url = f"{base_urls[1]}"
-        r = req.get(url)
-        data = r.json()
-        if data['metro_code'] == 0:
-            city = data['city']
-            region = data['region_name']
-
-            print(city, region)
-            return f"{city}, {region}"
-        else:
-            print("An error has occurred in geoloc fetching")
-            return -1

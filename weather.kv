@@ -259,19 +259,11 @@
                                         MDLabel:
                                             id: weather_humid_tm
                                             text: "0%"
-                        # 10 days weather page
-                        MDBottomNavigationItem:
-                            name: "screen 3"
-                            text: "10 days"
-                            icon: "clock-fast"
-                            MDLabel:
-                                text: "Work in progress..."
-                                halign: 'center'
 
             Screen:
                 name: "settings"
                 MDGridLayout:
-                    rows: 2
+                    rows: 3
                     MDTopAppBar:
                         left_action_items: [["arrow-left", lambda x: root.open_main()]]
                     MDScrollView:
@@ -289,9 +281,10 @@
                                 secondary_text: "Change unit of measure used for"
                                 tertiary_text: "weather data."
                                 on_release: root.unit_picker.open()
-                            OneLineListItem:
-                                text: "Read file"
-                                on_release: root.read()
+                    MDLabel:
+                        size_hint_y: .05
+                        text: "Developed by Juleast"
+                        pos_hint: {"right": 1, "bottom": 1}
                 MDIcon:
                     icon: "cog"
                     font_size: "200sp"
