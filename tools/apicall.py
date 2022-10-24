@@ -8,7 +8,8 @@ from calendar import day_name
 # api key for weather service. modify these to use your own
 api_keys = ["6Q4JUN7Y8TYWPAE9SDJ59V6V6", "LQFCHSKEJDLP43RMKJW4G53XJ"]
 # the base url for the weather service
-base_urls = ["https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline"]
+base_urls = ["https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline",
+             "https://freegeoip.live/json"]
 # units dictionary
 temp_units = {"c": "metric", "f": "us"}
 
@@ -24,9 +25,11 @@ def str_r(value):
         return "0"
 
 
-class weatherData:
+class WeatherData:
     def __init__(self, city, offset):
-        self.city = city
+        self.uf_city = city
+        split = self.uf_city.split(",")
+        self.city = f"{split[0].title()},{split[1].title()}"
         self.offset = offset
         self.base = f"{base_urls[0]}/{self.city}"
 
@@ -52,7 +55,7 @@ class weatherData:
             # get resolved address
             get_city = data['resolvedAddress'].split(",")
             if len(get_city) > 1 and get_city[0] == self.city.split(",")[0]:
-                city = f"{get_city[0]},{get_city[1]}"
+                city = f"{get_city[0].title()},{get_city[1]}"
             else:
                 city = self.city
             # variable to store current weather data
@@ -91,7 +94,6 @@ class weatherData:
         r = req.get(url)
         if r.status_code == 200:
             data = r.json()
-            print(data)
             # variable to store daily weather data
             data_d = data['days'][0]
             # main weather data
@@ -112,3 +114,22 @@ class weatherData:
         else:
             print("An error has occurred in fetching weather data for tmr")
 
+
+# class that gets the current location of the device based on the IP address
+class GeoLoc:
+    def __init__(self):
+        pass
+
+    def fetch(self):
+        url = f"{base_urls[1]}"
+        r = req.get(url)
+        data = r.json()
+        if data['metro_code'] == 0:
+            city = data['city']
+            region = data['region_name']
+
+            print("GeoLoc function results: ", city, region)
+            return f"{city}, {region}"
+        else:
+            print("An error has occurred in geoloc fetching")
+            return -1

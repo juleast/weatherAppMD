@@ -1,10 +1,11 @@
 # kivymd imports
+import atexit
+
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton, MDRaisedButton
-from kivymd.uix.selectioncontrol import MDSwitch
-from kivymd.uix.list import IRightBodyTouch
+
 # kivy imports
 from kivy import require
 from kivy.lang import Builder
@@ -18,9 +19,10 @@ from plyer import gps
 from geopy.geocoders import Nominatim
 
 # local imports
-from tools.apicall import weatherData
+from tools.apicall import WeatherData, GeoLoc
 from tools.check import internet, filecheck
 from tools.filemanager import rw
+import dialog.contents as c
 from threading import Thread
 from functools import partial
 
@@ -32,13 +34,14 @@ geolocator = Nominatim(user_agent="simple-weather")
 
 # load the kv files
 Builder.load_file('weather.kv')
-Builder.load_file('dialogcontents.kv')
 
 # variables for special characters and units
 units = {'metric': ["°C", "km/h", "c"], 'us': ["°F", "mph", "f"]}
 degree = "°"
 # variable for permission status
 permission = ["ungranted"]
+# backup variable for location
+b_location = GeoLoc().fetch()
 
 
 # dialog class to add an option to change button direction
@@ -63,11 +66,12 @@ class MainScreen(MDBoxLayout):
         self.prev = None
         self.location = ""
         self.coords = ""
+        self.no_gps = False
         # popup dialog for changing locations
         self.picker = MDDialog(
             title="Change location",
             type="custom",
-            content_cls=PickerContent(),
+            content_cls=c.Picker(),
             auto_dismiss=False,
             buttons=[
                 MDFlatButton(
@@ -80,11 +84,12 @@ class MainScreen(MDBoxLayout):
                 )
             ],
         )
+        '''The 6 variables below are popup dialogs'''
         # popup dialog for setting default location
         self.def_picker = MDDialog(
             title="Set default location",
             type="custom",
-            content_cls=PickerContent(),
+            content_cls=c.Picker(),
             auto_dismiss=False,
             buttons=[
                 MDFlatButton(
@@ -101,7 +106,7 @@ class MainScreen(MDBoxLayout):
         self.unit_picker = MDDialog(
             title="Change weather unit",
             type="custom",
-            content_cls=UnitChangerContent(),
+            content_cls=c.UnitChanger(),
             auto_dismiss=False,
             buttons=[
                 MDFlatButton(
@@ -116,7 +121,7 @@ class MainScreen(MDBoxLayout):
         # popup dialog to show error message
         self.weather_error = MDDialog(
             type="custom",
-            content_cls=ErrorContent(),
+            content_cls=c.Error(),
             auto_dismiss=False,
             buttons=[
                 MDFlatButton(
@@ -128,10 +133,10 @@ class MainScreen(MDBoxLayout):
             ],
             button_direction="center",
         )
-        # popup dialog to show internet error message
+        # popup dialog to show internet error
         self.internet_error = MDDialog(
             type="custom",
-            content_cls=ConErrorContent(),
+            content_cls=c.ConError(),
             auto_dismiss=False,
             buttons=[
                 MDFlatButton(
@@ -143,10 +148,11 @@ class MainScreen(MDBoxLayout):
             ],
             button_direction="center",
         )
+        # popup dialog to show gps permission error
         self.gps_error = MDDialog(
             title="Please allow location permissions",
             type="custom",
-            content_cls=GPSErrorContent(),
+            content_cls=c.GPSError(),
             auto_dismiss=False,
             buttons=[
                 MDFlatButton(
@@ -158,20 +164,57 @@ class MainScreen(MDBoxLayout):
             ],
             button_direction="center"
         )
+        # popup to show loading message
+        self.loading = MDDialog(
+            type="custom",
+            content_cls=c.GPSLoading(),
+            auto_dismiss=False,
+            buttons=[
+                MDFlatButton(
+                    text="I don't have GPS",
+                    theme_text_color="Custom",
+                    text_color=MainApp().theme_cls.accent_color,
+                    on_release=lambda x: Clock.schedule_once(self.set_gps)
+                )
+            ],
+            button_direction="center"
+        )
+        # popup to show credits
+        self.credits = MDDialog(
+            type="custom",
+            content_cls=c.Credits(),
+            auto_dismiss=True,
+            buttons=[
+                MDFlatButton(
+                    text="OK",
+                    theme_text_color="Custom",
+                    text_color=MainApp().theme_cls.primary_color,
+                    on_release=lambda x: self.credits.dismiss()
+                )
+            ],
+            button_direction="center"
+        )
+        # popup to show support options
+        self.support = MDDialog(
+            type="custom",
+            content_cls=c.Support(),
+            auto_dismiss=True,
+            buttons=[
+                MDFlatButton(
+                    text="CLOSE",
+                    theme_text_color="Custom",
+                    text_color=MainApp().theme_cls.primary_color,
+                    on_release=lambda x: self.support.dismiss()
+                )
+            ],
+            button_direction="center"
+        )
         Clock.schedule_once(self.request_android_permissions, 4)
 
+    # not to be confused with the class initializer; a function to initialize data for the app
     def init(self, *args):
         # checks if location permissions have been granted
         if permission[0] == "granted":
-            # configure the gps locator
-            gps.configure(on_location=self.get_location)
-            self.start()
-            while self.coords == "":
-                print(self.coords + " none")
-            # save gps location data
-            location = geolocator.reverse(self.coords).raw
-            city = location['address']['city']
-            region = location['address']['state']
             # checks if there is a save file available
             if filecheck().file():
                 r = rw()
@@ -179,8 +222,32 @@ class MainScreen(MDBoxLayout):
                 # initial required variables for weather data
                 self.location = rd['location']
                 self.unit = rd['unit']
+                print("File exists. Using existing variables...")
             else:
-                self.location = f"{city},{region}"
+                x = 0
+                # configure the gps locator
+                gps.configure(on_location=self.get_location)
+                self.start()
+                Thread(target=self.open_load, args=(), daemon=True).start()
+                while self.coords == "":
+                    print("Coordinates: ", self.coords)
+                    if self.no_gps:
+                        break
+                # checks if there was a GPS response versus user interruption
+                if self.no_gps:
+                    print("Looks like GPS failed. Using GeoIP.")
+                    if b_location != -1:
+                        self.location = b_location
+                    else:
+                        self.location = "Newmarket, Ontario"
+                else:
+                    Thread(target=self.close_load, args=(), daemon=True).start()
+                    print("GPS successful. Program will use this data for weather.")
+                    # save gps location data
+                    location = geolocator.reverse(self.coords).raw
+                    city = location['address']['city']
+                    region = location['address']['state']
+                    self.location = f"{city},{region}"
                 self.unit = "metric"
             self.prev = ""
             # variables to store in the json file
@@ -192,20 +259,37 @@ class MainScreen(MDBoxLayout):
                 self.unit_picker.content_cls.ids.unit_switch.active = False
             else:
                 self.unit_picker.content_cls.ids.unit_switch.active = True
+            # save initial collected data
+            self.save_settings()
             # runs the update function
             Clock.schedule_once(self.get_update)
+
+    # these methods are for opening and closing the loading dialog
+    @mainthread
+    def open_load(self):
+        self.loading.open()
+
+    @mainthread
+    def close_load(self):
+        self.loading.dismiss()
+
+    '''Related to GPS'''
 
     # method to request location permissions of device
     def request_android_permissions(self, *args):
         from android.permissions import Permission, request_permissions
-        @mainthread
+
         def callback(permissions, results):
             if all([res for res in results]):
                 print("All permissions granted.")
                 permission[0] = "granted"
-                self.init()
+                Thread(target=self.init, args=(), daemon=True).start()
             else:
-                self.gps_error.open()
+                @mainthread
+                def error_open():
+                    self.gps_error.open()
+
+                error_open()
 
         request_permissions([Permission.ACCESS_COARSE_LOCATION,
                              Permission.ACCESS_FINE_LOCATION], callback)
@@ -217,15 +301,22 @@ class MainScreen(MDBoxLayout):
 
     # method to start collecting gps location data
     def start(self, *args):
-        gps.start(minTime=1000, minDistance=0)
+        gps.start(minTime=500, minDistance=0)
 
     # method that will get the current gps location
     def get_location(self, **kwargs):
         lat = kwargs['lat']
         lon = kwargs['lon']
-        self.coords = f"{lat}, {lon}"
-        print(kwargs)
         gps.stop()
+        self.coords = f"{lat}, {lon}"
+
+    @mainthread
+    # method to set no_gps to true
+    def set_gps(self, *args):
+        self.no_gps = True
+        self.loading.dismiss()
+
+    '''Related to core app functions'''
 
     # method that cancels unit change dialog
     def get_update(self, *args):
@@ -236,8 +327,8 @@ class MainScreen(MDBoxLayout):
     def update(self, *args):
         # checks for internet first
         if internet().ping():
-            weather_today = weatherData(self.location, units[self.unit][2]).now_fetch()
-            weather_tmr = weatherData(self.location, units[self.unit][2]).tmr_fetch()
+            weather_today = WeatherData(self.location, units[self.unit][2]).now_fetch()
+            weather_tmr = WeatherData(self.location, units[self.unit][2]).tmr_fetch()
             # check if a valid weather data has been returned
             if weather_today != -1 and weather_tmr != 1:
                 self.today(self.unit, weather_today)
@@ -289,7 +380,8 @@ class MainScreen(MDBoxLayout):
         # makes sure that user has entered in (city,region) format
         test = self.def_picker.content_cls.ids.location.text.split(",")
         if self.def_picker.content_cls.ids.location.text != "" and len(test) == 2:
-            self.def_location = self.def_picker.content_cls.ids.location.text
+            capitalize = f"{test[0].title()},{test[1].title()}"
+            self.def_location = capitalize
             self.def_picker.content_cls.ids.location.text = ""
             self.def_picker.dismiss()
             self.def_picker.content_cls.ids.location.helper_text = "Field cannot be blank"
@@ -314,7 +406,8 @@ class MainScreen(MDBoxLayout):
         if self.picker.content_cls.ids.location.text != "" and len(test) == 2:
             # backups current city name to revert when errors occur
             self.prev = self.location
-            self.location = self.picker.content_cls.ids.location.text
+            capitalize = f"{test[0].title()},{test[1].title()}"
+            self.location = capitalize
             self.picker.content_cls.ids.location.text = ""
             self.picker.dismiss()
             self.picker.content_cls.ids.current_location.text = f"{self.location}"
@@ -335,6 +428,8 @@ class MainScreen(MDBoxLayout):
         popup.content_cls.ids.location.helper_text = "Field cannot be left blank"
         Clock.schedule_once(partial(self.clear_text, popup), .15)
 
+    '''Related to switching screens'''
+
     # method that switches to the settings screen
     def open_settings(self):
         self.ids.screenmanager.transition = RiseInTransition(duration=0.2)
@@ -345,44 +440,17 @@ class MainScreen(MDBoxLayout):
     def open_main(self):
         self.ids.screenmanager.transition = FallOutTransition(duration=0.2)
         self.ids.screenmanager.current = "main"
+        Thread(target=self.save_settings, args=(), daemon=True).start()
 
-        def save_settings():
-            loc_arr = [self.location, self.def_location]
-            unit = self.unit
-            w = rw()
-            w.write(loc_arr, unit)
-
-        Thread(target=save_settings, args=(), daemon=True).start()
-
-
-# widget for location changer popup
-class PickerContent(MDBoxLayout):
-    pass
+    def save_settings(self, *args):
+        loc_arr = [self.location, self.def_location]
+        unit = self.unit
+        w = rw()
+        w.write(loc_arr, unit)
+        print("Current data saved.")
 
 
-# widget for weather unit changer popup
-class UnitChangerContent(MDBoxLayout):
-    pass
-
-
-# widget container to house the switch
-class RightBox(IRightBodyTouch, MDSwitch):
-    pass
-
-
-# widget for fetch error message popup
-class ErrorContent(MDBoxLayout):
-    pass
-
-
-# widget for internet error popup
-class ConErrorContent(MDBoxLayout):
-    pass
-
-
-# widget for gps error popup
-class GPSErrorContent(MDBoxLayout):
-    pass
+'''The main app class. This is the core of the whole application'''
 
 
 # main app class
@@ -395,15 +463,6 @@ class MainApp(MDApp):
         self.theme_cls.material_style = "M3"
         return MainScreen()
 
-    # last save function for when the app closes
-    def last_save(self):
-        loc_arr = [MainScreen().location, MainScreen().def_location]
-        unit = MainScreen().unit
-        w = rw()
-        w.write(loc_arr, unit)
-        print("success!")
-
 
 if __name__ == "__main__":
     MainApp().run()
-    MainApp().last_save()

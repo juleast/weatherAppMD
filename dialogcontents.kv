@@ -1,9 +1,9 @@
-<PickerContent>:
+<Picker>:
     location: location
     orientation: 'vertical'
-    spacing: "12dp"
+    spacing: dp(12)
     size_hint_y: None
-    height: "80dp"
+    height: dp(100)
     MDGridLayout:
         rows: 3
         MDLabel:
@@ -12,8 +12,8 @@
         MDLabel:
             id: current_location
             text: ""
-            halign: "center"
-            size_hint_y: .1
+            size_hint_y: .2
+            pos_hint: {"bottom": 1}
         MDTextField:
             id: location
             hint_text: "Enter in (city,region) format"
@@ -24,29 +24,29 @@
             on_focus: if self.focused and self.error: self.error = False
             on_text: if self.focused and not self.text: self.error = False
 
-<ErrorContent>:
+<Error>:
     orientation: 'vertical'
-    spacing: "12dp"
+    spacing: dp(12)
     size_hint_y: None
-    height: "40dp"
+    height: dp(40)
     MDLabel:
         text: "Error fetching weather data. Reverting back to previous location."
         font_size: "17sp"
 
-<ConErrorContent>:
+<ConError>:
     orientation: 'vertical'
-    spacing: "12dp"
+    spacing: dp(12)
     size_hint_y: None
-    height: "40dp"
+    height: dp(40)
     MDLabel:
         text: "Connection error. Check for valid internet connection."
         font_size: "17sp"
 
-<UnitChangerContent>:
+<UnitChanger>:
     orientation: 'vertical'
-    spacing: "5dp"
+    spacing: dp(5)
     size_hint_y: None
-    height: "50dp"
+    height: dp(50)
     OneLineRightIconListItem:
         text: "Switch °F/°C"
         divider: None
@@ -58,12 +58,50 @@
             icon_active: "temperature-fahrenheit"
             on_active: print(self.active)
 
-<GPSErrorContent>:
+<GPSError>:
     orientation: "vertical"
     spacing: dp(5)
     size_hint_y: None
-    height: "50dp"
+    height: dp(50)
     MDLabel:
         text: "The app cannot function without permissions."
+
+<GPSLoading>:
+    orientation: "vertical"
+    spacing: dp(5)
+    size_hint_y: None
+    height: dp(60)
+    MDLabel:
+        text: "Attempting to read GPS location..."
+
+<Credits>:
+    orientation: "vertical"
+    spacing: dp(5)
+    size_hint_y: None
+    height: dp(160)
+    MDList:
+        ThreeLineListItem:
+            text: "Developed by Juleast"
+            secondary_text: "Tap here to visit the"
+            tertiary_text: "developer's profile."
+            on_release: root.open_dev_credits()
+        ThreeLineListItem:
+            text: "Background image by"
+            secondary_text: "starline on Freepik."
+            tertiary_text: "Tap here to learn more"
+            on_release: root.open_img_credits()
+
+<Support>:
+    orientation: "vertical"
+    spacing: dp(5)
+    size_hint_y: None
+    height: dp(60)
+    MDList:
+        OneLineListItem:
+            text: "Contact Developer"
+            on_release: root.dev_mail()
+        OneLineListItem:
+            text: "Privacy Policy"
+            on_release: root.privacy()
 
 

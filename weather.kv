@@ -1,6 +1,3 @@
-<DrawerItem@MDNavigationDrawerItem>:
-    padding: 0, 0, "10dp", 0
-    focus_color: app.theme_cls.primary_light
 <Content>:
     orientation: 'vertical'
 <MainScreen>:
@@ -281,10 +278,13 @@
                                 secondary_text: "Change unit of measure used for"
                                 tertiary_text: "weather data."
                                 on_release: root.unit_picker.open()
-                    MDLabel:
-                        size_hint_y: .05
-                        text: "Developed by Juleast"
-                        pos_hint: {"right": 1, "bottom": 1}
+                            TwoLineListItem:
+                                text: "Credits"
+                                secondary_text: "Credits go to their respectful creators"
+                                on_release: root.credits.open()
+                            OneLineListItem:
+                                text: "Support"
+                                on_release: root.support.open()
                 MDIcon:
                     icon: "cog"
                     font_size: "200sp"
@@ -306,7 +306,7 @@
             id: nav_drawer
             radius: (0, "16dp", "16dp", 0)
             md_bg_color: "lightgrey"
-            size_hint_x: .7
+            size_hint_x: .8
             MDNavigationDrawerMenu:
                 MDNavigationDrawerHeader:
                     title: "Simple Weather"
@@ -316,11 +316,11 @@
                 MDNavigationDrawerDivider:
                     size_hint_x: 1
                     padding: 0, "10dp", 0, "10dp"
-                DrawerItem:
+                MDNavigationDrawerItem:
                     icon: "map-marker-multiple"
                     text: "Locations"
                     on_release: root.picker.open()
-                DrawerItem:
+                MDNavigationDrawerItem:
                     icon: "cog"
                     text: "Settings"
                     on_release: root.open_settings()
